@@ -22,3 +22,5 @@
   - `--output_dir`: Thư mục lưu ảnh đã tăng cường.
   - `--augmentation_config`: Tập tin cấu hình YAML chứa các tham số tăng cường. File này được sinh ra bằng cách sử dụng `albumentations.save` để lưu các biến thể tăng cường (xem trong [Serializing an augmentation pipeline to a JSON or YAML file](https://albumentations.ai/docs/examples/serialization/#serializing-an-augmentation-pipeline-to-a-json-or-yaml-file))
   - `--augmentation_radio`: Số lượng ảnh tăng cường cần tạo cho mỗi ảnh gốc. Nếu tham số này là x thì sẽ tạo ra x ảnh tăng cường cho mỗi ảnh gốc, tổng số ảnh sau khi tăng cường sẽ là (x + 1) * số lượng ảnh gốc.  (Mặc định là 3)
+> [!CAUTION] Cẩn thận
+> Script trên chỉ được sử dụng để tăng cường dữ liệu với các loại tăng cường không làm thay đổi kích thước, vị trí của ảnh. Nếu sử dụng các loại tăng cường làm thay đổi kích thước, vị trí của ảnh thì cần phải cập nhật lại các nhãn tương ứng trong file JSON. 
