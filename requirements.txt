@@ -1,0 +1,2 @@
+tqdm==4.67.1
+albumentations==2.0.8

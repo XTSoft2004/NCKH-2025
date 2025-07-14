@@ -6,10 +6,8 @@
 
 ## 2. Mục tiêu
 
-- Phát hiện vùng chứa thông tin trên thẻ sinh viên (họ và tên, mã số sinh viên, ngày sinh, lớp, khóa học).
-- Tiền xử lý ảnh để tối ưu kết quả nhận dạng.
-- Áp dụng mô hình OCR để trích xuất văn bản từ vùng ảnh đã phát hiện.
-- Chuẩn hóa và hiển thị thông tin dưới dạng có cấu trúc.
+- Trích xuất thông tin từ ảnh thẻ sinh viên, bao gồm: họ và tên, ngày sinh, mã sinh viên, lớp học và khóa học.
+- Xây dựng ứng dụng di động để người dùng có thể chụp ảnh thẻ sinh viên và nhận kết quả trích xuất ngay lập tức.
 
 ## 3. Công nghệ sử dụng
 
@@ -18,3 +16,16 @@
 - **PaddleLite** – Chạy mô hình AI nhẹ, có thể deploy trên thiết bị di động.
 - **[LabelMe](https://github.com/wkentaro/labelme)** – Gán nhãn dữ liệu (nếu huấn luyện thêm).
 - **Flutter** – Giao diện người dùng trên mobile.
+
+## 4. Hướng dẫn cài đặt và sử dụng
+
+## 5. Nhóm thực hiện
+- **[Ngô Văn Hải](https://github.com/VHSkillPro)** (Chủ nhiệm đề tài) - Đại học Khoa học - Đại học Huế
+- **Hoàng Bảo Khánh** (Thành viên) - Đại học Khoa học - Đại học Huế
+- **[Trần Xuân Trường](https://github.com/XTSoft2004)** (Thành viên) - Đại học Khoa học - Đại học Huế
+
+## 6. Tài liệu tham khảo
+
+
+## 7. Giấy phép
+Dự án này được phát hành dưới giấy phép MIT. Vui lòng xem tệp LICENSE để biết chi tiết.

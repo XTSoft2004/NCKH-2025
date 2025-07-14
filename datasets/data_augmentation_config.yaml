@@ -1,0 +1,47 @@
+{
+  "__version__": "2.0.8",
+  "transform":
+    {
+      "__class_fullname__": "Compose",
+      "p": 1.0,
+      "transforms":
+        [
+          { "__class_fullname__": "Blur", "p": 0.5, "blur_limit": [3, 4] },
+          {
+            "__class_fullname__": "Downscale",
+            "p": 0.5,
+            "interpolation_pair": { "upscale": 0, "downscale": 0 },
+            "scale_range": [0.25, 0.25],
+          },
+          {
+            "__class_fullname__": "RandomGamma",
+            "p": 0.5,
+            "gamma_limit": [40.0, 160.0],
+          },
+          {
+            "__class_fullname__": "RandomBrightnessContrast",
+            "p": 0.5,
+            "brightness_by_max": true,
+            "brightness_limit": [-0.2, 0.2],
+            "contrast_limit": [-0.2, 0.2],
+            "ensure_safe_range": false,
+          },
+          {
+            "__class_fullname__": "AdditiveNoise",
+            "p": 0.5,
+            "approximation": 1.0,
+            "noise_params":
+              {
+                "noise_type": "uniform",
+                "ranges": [[-0.1, 0.1], [-0.1, 0.1], [-0.1, 0.1]],
+              },
+            "noise_type": "uniform",
+            "spatial_mode": "shared",
+          },
+        ],
+      "bbox_params": null,
+      "keypoint_params": null,
+      "additional_targets": {},
+      "is_check_shapes": true,
+    },
+}
