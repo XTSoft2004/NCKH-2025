@@ -15,7 +15,31 @@
     └── others/
     ```
 
-## 2. Tăng cường dữ liệu
+## 2. Chia tập dữ liệu
+- Sử dụng script `data_split.py` để chia tập dữ liệu thành các tập huấn luyện và kiểm tra. Script này sẽ đọc các file JSON đã gán nhãn, chuyển đổi định dạng sang định dạng PaddleOCR và lưu các file ảnh tương ứng vào các thư mục `train` và `test`.
+- Các tham số của script:
+  - `--input_dir`: Thư mục chứa các file ảnh và JSON gán nhãn.
+  - `--output_dir`: Thư mục lưu trữ các tập dữ liệu đã chia.
+  - `--train_ratio`: Tỷ lệ phần trăm của tập huấn luyện so với tổng số ảnh. Mặc định là 0.8 (80% cho tập huấn luyện, 20% cho tập kiểm tra).
+- Ví dụ sử dụng:
+  ```bash
+  python datasets/data_split.py \
+        --input_dir datasets/raw \
+        --output_dir datasets/split \
+        --train_ratio 0.8
+  ```
+- Kết quả sẽ được lưu trong thư mục `datasets/split` với cấu trúc như sau:
+    ```
+    datasets/
+    ├── split/
+    │   ├── train_images/
+    │   ├── test_images/
+    │   ├── train_labels.txt
+    │   └── test_labels.txt
+    └── others/
+    ```
+
+## 3. Tăng cường dữ liệu
 - Sử dụng các kỹ thuật tăng cường dữ liệu như xoay, lật, thay đổi độ sáng, độ tương phản để tạo ra các biến thể của ảnh thẻ sinh viên. Điều này giúp mô hình học được các đặc điểm khác nhau của thẻ sinh viên trong các điều kiện khác nhau.
 - Sử dụng script `data_augment.py` để tự động tăng cường dữ liệu với các tham số tùy chỉnh như sau:
   - `--input_dir`: Thư mục chứa ảnh gốc.

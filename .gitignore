@@ -1,3 +1,2 @@
 .conda
-datasets/raw/**
-datasets/augmented/**
+datasets/*/
