@@ -81,7 +81,7 @@ if __name__ == "__main__":
                 for shape in annotation.get("shapes", [])
             ]
             paddle_annotations.append(
-                f"{osp.join(f"{prefix}_images", image_name)}\t{json.dumps(converted_annotation, ensure_ascii=False)}"
+                f"{image_name}\t{json.dumps(converted_annotation, ensure_ascii=False)}"
             )
 
             # Copy the image to the output directory
