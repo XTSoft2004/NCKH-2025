@@ -12,6 +12,7 @@
 ## 3. Công nghệ sử dụng
 
 - **OpenCV** – Xử lý ảnh và phát hiện vùng quan tâm.
+- **[Tensorflow](https://www.tensorflow.org/)** - Thư viện học sâu để xây dựng và huấn luyện mô hình phân loại thẻ sinh viên.
 - **[PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)** – Nhận dạng ký tự quang học.
 - **PaddleLite** – Chạy mô hình AI nhẹ, có thể deploy trên thiết bị di động.
 - **[LabelMe](https://github.com/wkentaro/labelme)** – Gán nhãn dữ liệu (nếu huấn luyện thêm).
