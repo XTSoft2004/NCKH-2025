@@ -22,7 +22,7 @@ def evaluate(ds: tf.data.Dataset, model: keras.Model, class_map: dict[str, int])
     y_pred_proba = preds[:, 1]
     fpr, tpr, thresholds = roc_curve(y_true, y_pred_proba)
     result["auc"] = auc(fpr, tpr)  # type: ignore
-    result["y_true"] = y_true  # type: ignore
-    result["y_pred_proba"] = y_pred_proba  # type: ignore
+    result["y_true"] = y_true.tolist()  # type: ignore
+    result["y_pred_proba"] = y_pred_proba.tolist()  # type: ignore
 
     return result

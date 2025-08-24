@@ -87,6 +87,7 @@ if __name__ == "__main__":
 
     # Create output dir
     os.makedirs(config.output_dir, exist_ok=True)
+    os.makedirs(os.path.join(config.output_dir, config.model_name), exist_ok=True)
 
     # Get model
     print(f">>> Using model: {config.model_name}")
@@ -105,6 +106,18 @@ if __name__ == "__main__":
     class_weights = {i: weight for i, weight in enumerate(class_weights)}
     print(f">>> Classes map: {class_map}")
     print(f">>> Class weights: {class_weights}")
+
+    # Save class map
+    with open(
+        f"{os.path.join(config.output_dir, config.model_name)}/class_map.json", "w"
+    ) as f:
+        json.dump(class_map, f)
+
+    # Save class weights
+    with open(
+        f"{os.path.join(config.output_dir, config.model_name)}/class_weights.json", "w"
+    ) as f:
+        json.dump(class_weights, f)
 
     X = np.array(X)
     y = np.array(y)
@@ -148,7 +161,6 @@ if __name__ == "__main__":
         )
         results.append(evaluate(test_ds, model, class_map))
 
-        os.makedirs(os.path.join(config.output_dir, config.model_name), exist_ok=True)
         save_path = (
             f"{os.path.join(config.output_dir, config.model_name)}/fold-{fold}.keras"
         )
