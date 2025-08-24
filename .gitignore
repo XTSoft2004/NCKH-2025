@@ -1,2 +1,4 @@
 .conda
 datasets/*/
+**/__pycache__/
+**.pyc
