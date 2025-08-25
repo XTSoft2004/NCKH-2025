@@ -5,8 +5,8 @@ import models
 import argparse
 import numpy as np
 from evaluate import evaluate
-from dataset import load_dataset, load_stratified_kfold
-from sklearn.utils.class_weight import compute_class_weight
+from sklearn.utils import compute_class_weight
+from dataset import load_stratified_kfold, load_dataset_from_list
 
 
 class Config:
@@ -19,7 +19,7 @@ class Config:
         self.random_state: int = args.random_state
         self.epochs: int = args.epochs
         self.model_name: str = args.model
-        self.num_classes: int = len(os.listdir(args.input_dir))
+        self.num_classes: int = 0  # To be set after loading dataset
 
     def __str__(self) -> str:
         return (
@@ -60,8 +60,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=32,
-        help="Batch size for training (default: 32)",
+        default=64,
+        help="Batch size for training (default: 64)",
     )
     parser.add_argument(
         "--random-state",
@@ -83,48 +83,66 @@ if __name__ == "__main__":
 
     # Initialize configuration
     config = Config(args)
+
+    # Read dataset in input_dir
+    X_train, y_train, X_test, y_test, info = load_stratified_kfold(
+        config.input_dir, config.k_fold, config.random_state
+    )
+    X_train = np.array(X_train)
+    X_test = np.array(X_test)
+    y_train = np.array(y_train)
+    y_test = np.array(y_test)
+    config.num_classes = len(info["label"])
     print(f">>> Configuration:\n{config}")
+
+    print(f">>> Found {len(info['label'])} classes: {info['label']}")
+    print(f"\t >>> Found {len(X_train)} training images")
+    print(f"\t >>> Found {len(X_test)} testing images")
+
+    # Prepare inputs
+    class_weights = compute_class_weight(
+        class_weight="balanced", classes=np.unique(y_train), y=y_train
+    )
+    class_weights = {i: w for i, w in enumerate(class_weights)}
+    class_map = info["label_map"]
+    print(f">>> Classes map: {class_map}")
+    print(f">>> Class weights: {class_weights}")
 
     # Create output dir
     os.makedirs(config.output_dir, exist_ok=True)
     os.makedirs(os.path.join(config.output_dir, config.model_name), exist_ok=True)
 
     # Get model
-    print(f">>> Using model: {config.model_name}")
+    print(f"\n>>> Using model: {config.model_name}")
     model: keras.Model = models.models_dict[config.model_name](
         image_size=config.image_size, num_classes=config.num_classes
     )
-    model.summary()
 
-    # Load dataset and split with Stratified K-Fold
-    splits, X, y, class_map = load_stratified_kfold(
-        input_dir=config.input_dir, k=config.k_fold, random_state=config.random_state
-    )
-    class_weights = compute_class_weight(
-        class_weight="balanced", classes=np.unique(y), y=y
-    )
-    class_weights = {i: weight for i, weight in enumerate(class_weights)}
-    print(f">>> Classes map: {class_map}")
-    print(f">>> Class weights: {class_weights}")
+    # model.summary()
 
-    # Save class map
-    with open(
-        f"{os.path.join(config.output_dir, config.model_name)}/class_map.json", "w"
-    ) as f:
-        json.dump(class_map, f)
-
-    # Save class weights
-    with open(
-        f"{os.path.join(config.output_dir, config.model_name)}/class_weights.json", "w"
-    ) as f:
-        json.dump(class_weights, f)
-
-    X = np.array(X)
-    y = np.array(y)
-    results = []
+    # Data Augmentation
+    data_augmentation_list = [
+        keras.layers.RandomRotation(0.05),
+        keras.layers.RandomZoom(0.1),
+        keras.layers.RandomBrightness(0.1),
+        keras.layers.RandomContrast(0.1),
+        keras.layers.RandomTranslation(0.1, 0.1),
+    ]
 
     # Train
-    for fold, (train_idx, val_idx) in enumerate(splits):
+    results = []
+
+    test_ds = load_dataset_from_list(
+        X_test,
+        y_test,
+        config.num_classes,
+        config.image_size,
+        config.batch_size,
+        is_test_set=True,
+    )
+    y_true = np.concatenate([y for x, y in test_ds], axis=0)
+
+    for fold, (train_idx, val_idx) in enumerate(info["train_splits"]):
         model: keras.Model = models.models_dict[config.model_name](
             image_size=config.image_size, num_classes=config.num_classes
         )
@@ -134,31 +152,37 @@ if __name__ == "__main__":
             metrics=["accuracy"],
         )
 
-        X_train_paths = X[train_idx]
-        y_train = y[train_idx]
+        X_train_fold = X_train[train_idx]
+        y_train_fold = y_train[train_idx]
+        X_val_fold = X_train[val_idx]
+        y_val_fold = y_train[val_idx]
 
-        X_test_paths = X[val_idx]
-        y_test = y[val_idx]
-
-        train_ds = load_dataset(
-            X_train_paths,
-            y_train,
+        train_ds = load_dataset_from_list(
+            X_train_fold,
+            y_train_fold,
             config.num_classes,
             config.image_size,
             config.batch_size,
+            img_augmentation_layers=data_augmentation_list,
+        )
+        val_ds = load_dataset_from_list(
+            X_val_fold,
+            y_val_fold,
+            config.num_classes,
+            config.image_size,
+            config.batch_size,
+            is_test_set=True,
         )
 
         print(f">>> Training fold {fold + 1}/{config.k_fold}")
-        model.fit(train_ds, epochs=config.epochs, class_weight=class_weights)
+        model.fit(
+            train_ds,
+            validation_data=val_ds,
+            epochs=config.epochs,
+            class_weight=class_weights,
+        )
 
         print(f">>> Evaluating fold {fold + 1}/{config.k_fold}")
-        test_ds = load_dataset(
-            X_test_paths,
-            y_test,
-            config.num_classes,
-            config.image_size,
-            config.batch_size,
-        )
         results.append(evaluate(test_ds, model, class_map))
 
         save_path = (

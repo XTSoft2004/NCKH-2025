@@ -1,70 +1,76 @@
 import os
-import numpy as np
-from sklearn.model_selection import StratifiedKFold
 import tensorflow as tf
+from sklearn.model_selection import StratifiedKFold
+from keras.src.layers.preprocessing.image_preprocessing.base_image_preprocessing_layer import (
+    BaseImagePreprocessingLayer,
+)
 
 
 def load_stratified_kfold(input_dir: str, k: int, random_state: int = 42):
-    """
-    Loads image file paths and their corresponding class labels from a directory structure,
-    and generates stratified K-fold splits for cross-validation.
+    info = {}
+    info["label"] = os.listdir(input_dir)
+    info["label_map"] = {label: i for i, label in enumerate(info["label"])}
 
-    Args:
-      input_dir (str): Path to the root directory containing subdirectories for each class.
-      k (int): Number of folds for stratified K-fold cross-validation.
-      random_state (int, optional): Random seed for reproducibility. Defaults to 42.
+    X_train: list[str] = []
+    y_train: list[int] = []
 
-    Returns:
-      tuple: A tuple containing:
-        - splits (list): List of (train_idx, test_idx) tuples for each fold.
-        - X (list): List of image file paths.
-        - y (list): List of class labels corresponding to each image.
-        - classes (list): List of class names found in the input directory.
-    """
-    classes = os.listdir(input_dir)
+    X_test: list[str] = []
+    y_test: list[int] = []
 
-    X: list[str] = []
-    y: list[int] = []
+    for label in info["label"]:
+        label_dir = os.path.join(input_dir, label)
 
-    class_map = {cls: i for i, cls in enumerate(classes)}
+        # Load in train_images
+        train_images_dir = os.path.join(label_dir, "train_images")
+        for img_name in os.listdir(train_images_dir):
+            X_train.append(os.path.join(train_images_dir, img_name))
+            y_train.append(info["label_map"][label])
 
-    for cls in classes:
-        cls_dir = os.path.join(input_dir, cls)
-        for img_name in os.listdir(cls_dir):
-            X.append(os.path.join(cls_dir, img_name))
-            y.append(class_map[cls])
+        # Load in test_images
+        test_images_dir = os.path.join(label_dir, "test_images")
+        for img_name in os.listdir(test_images_dir):
+            X_test.append(os.path.join(test_images_dir, img_name))
+            y_test.append(info["label_map"][label])
 
     kf = StratifiedKFold(n_splits=k, random_state=random_state, shuffle=True)
-    return list(kf.split(X, y)), X, y, class_map
+    info["train_splits"] = list(kf.split(X_train, y_train))
+    return X_train, y_train, X_test, y_test, info
 
 
-def load_dataset(
-    image_paths: list[str] | np.ndarray,
-    labels: list | np.ndarray,
+def load_dataset_from_list(
+    image_paths: list[str],
+    labels: list,
     num_classes: int,
     image_size: tuple[int, int] = (224, 224),
     batch_size: int = 32,
+    is_test_set: bool = False,
+    img_augmentation_layers: list[BaseImagePreprocessingLayer] = None,
 ):
-    """
-    Loads and preprocesses images and labels into a TensorFlow dataset.
-
-    Args:
-      image_paths (list[str] | np.ndarray): List of file paths to the images.
-      labels (list | np.ndarray): List of labels corresponding to each image.
-      image_size (tuple[int, int], optional): Target size to resize images (height, width). Defaults to (224, 224).
-      batch_size (int, optional): Number of samples per batch. Defaults to 32.
-
-    Returns:
-      tf.data.Dataset: A TensorFlow dataset yielding batches of preprocessed images and their labels.
-    """
-
-    def _load_and_preprocess(path: str, label):
+    def input_preprocess_train(path: str, label):
         img = tf.io.read_file(path)
-        img = tf.image.decode_jpeg(img, channels=3)  # type: ignore
+        img = tf.image.decode_jpeg(img, channels=3)
+        img = tf.image.resize(img, image_size)
+
+        # Data augmentation
+        if (img_augmentation_layers is not None) and (len(img_augmentation_layers) > 0):
+            for layer in img_augmentation_layers:
+                img = layer(img)
+
+        return img, tf.one_hot(label, depth=num_classes)
+
+    def input_preprocess_test(path: str, label):
+        img = tf.io.read_file(path)
+        img = tf.image.decode_jpeg(img, channels=3)
         img = tf.image.resize(img, image_size)
         return img, tf.one_hot(label, depth=num_classes)
 
     dataset = tf.data.Dataset.from_tensor_slices((image_paths, labels))
-    dataset = dataset.map(_load_and_preprocess, num_parallel_calls=tf.data.AUTOTUNE)
-    dataset = dataset.shuffle(100).batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    dataset = dataset.map(
+        input_preprocess_test if is_test_set else input_preprocess_train,
+        num_parallel_calls=tf.data.AUTOTUNE,
+    )
+    dataset = dataset.batch(batch_size=batch_size)
+    if not is_test_set:
+        dataset = dataset.prefetch(tf.data.AUTOTUNE)
+
     return dataset
