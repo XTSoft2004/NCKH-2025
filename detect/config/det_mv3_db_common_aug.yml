@@ -59,9 +59,9 @@ Metric:
 Train:
   dataset:
     name: SimpleDataSet
-    data_dir: /kaggle/input/nckh-2025-datasets/datasets-1/train_images
+    data_dir: /kaggle/input/nckh-2025-datasets/datasets-1-aug/train_images
     label_file_list:
-    - /kaggle/input/nckh-2025-datasets/datasets-1/train_labels.txt
+    - /kaggle/input/nckh-2025-datasets/datasets-1-aug/train_labels.txt
     ratio_list:
     - 1.0
     transforms:
@@ -115,9 +115,9 @@ Train:
 Eval:
   dataset:
     name: SimpleDataSet
-    data_dir: /kaggle/input/nckh-2025-datasets/datasets-1/test_images
+    data_dir: /kaggle/input/nckh-2025-datasets/datasets-1-aug/test_images
     label_file_list:
-    - /kaggle/input/nckh-2025-datasets/datasets-1/test_labels.txt
+    - /kaggle/input/nckh-2025-datasets/datasets-1-aug/test_labels.txt
     transforms:
     - DecodeImage:
         img_mode: BGR
