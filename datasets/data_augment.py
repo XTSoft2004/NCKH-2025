@@ -1,135 +1,77 @@
-import os
-import argparse
-import cv2
-from tqdm import tqdm
+import cv2, os
+import os.path as osp
 import albumentations as A
 
+IMG_HEIGHT, IMG_WIDTH = 640, 640
 
-class Config:
-    def __init__(self, args: argparse.Namespace):
-        if not os.path.exists(args.output_dir):
-            os.makedirs(self.output_dir)
-        self.__check_args(args)
+transform = A.Compose(
+    [
+        A.SomeOf(
+            n=3,
+            transforms=[
+                A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2),
+                A.GaussianBlur(blur_limit=(3, 5), sigma_limit=(0, 2.0)),
+                A.MotionBlur(blur_limit=(3, 5)),
+                A.GaussNoise(std_range=(0.02, 0.05), mean_range=(0, 0)),
+                A.CoarseDropout(
+                    num_holes_range=(5, 15),
+                    hole_height_range=(10, int(IMG_HEIGHT * 0.03)),
+                    hole_width_range=(10, int(IMG_WIDTH * 0.03)),
+                    fill=0,
+                ),
+            ],
+            p=1.0,
+        )
+    ]
+)
 
-        self.input_dir: str = args.input_dir
-        self.output_dir: str = args.output_dir
-        self.augmentation_config: str = args.augmentation_config
-        self.augmentation_radio: int = args.augmentation_radio
+DATASET_INPUT_DIR = osp.join("final", "datasets-2", "student_card", "train_images")
+LABEL_INPUT_PATH = osp.join("final", "datasets-2", "student_card", "train_labels.txt")
+DATASET_OUTPUT_DIR = osp.join("final", "datasets-2-aug", "student_card", "train_images")
+LABEL_OUTPUT_PATH = osp.join("final", "datasets-2-aug", "train_labels.txt")
 
-    def __str__(self):
-        return (
-            f"\t- Input Directory: {self.input_dir}\n"
-            f"\t- Output Directory: {self.output_dir}\n"
-            f"\t- Augmentation Configuration: {self.augmentation_config}\n"
-            f"\t- Augmentation Radio: {self.augmentation_radio}"
+if not osp.exists(DATASET_OUTPUT_DIR):
+    os.makedirs(DATASET_OUTPUT_DIR)
+
+labels_map = dict()
+with open(LABEL_INPUT_PATH, "r", encoding="utf-8") as f:
+    lines = f.readlines()
+    for line in lines:
+        line = line.split("\t")
+        labels_map[line[0]] = line[1]
+
+labels_aug_map = dict()
+for image_name in os.listdir(DATASET_INPUT_DIR):
+    image_name_without_ext = osp.splitext(image_name)[0]
+    image_ext = osp.splitext(image_name)[1]
+    image_path = osp.join(DATASET_INPUT_DIR, image_name)
+
+    image = cv2.imread(image_path)
+    cv2.imwrite(osp.join(DATASET_OUTPUT_DIR, image_name), image)
+    labels_aug_map[image_name] = labels_map[image_name]
+
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    for i in range(3):
+        augmented = transform(image=image)
+        augmented_image = augmented["image"]
+        augmented_image = cv2.cvtColor(augmented_image, cv2.COLOR_RGB2BGR)
+
+        labels_aug_map[f"{image_name_without_ext}_aug_{i}{image_ext}"] = labels_map[
+            image_name
+        ]
+        cv2.imwrite(
+            osp.join(
+                DATASET_OUTPUT_DIR, f"{image_name_without_ext}_aug_{i}{image_ext}"
+            ),
+            augmented_image,
         )
 
-    def __check_args(self, args: argparse.Namespace):
-        assert os.path.exists(args.input_dir), "Input directory does not exist"
-        assert os.path.exists(
-            args.augmentation_config
-        ), "!!! Augmentation configuration file does not exist"
-        assert (
-            args.augmentation_radio > 0
-        ), "!!! Augmentation radio must be a positive integer"
-        assert os.path.isdir(args.input_dir), "!!! Input path must be a directory"
-        assert os.path.isdir(args.output_dir), "!!! Output path must be a directory"
-        assert args.augmentation_config.endswith(
-            ".yaml"
-        ), "!!! Augmentation configuration must be a YAML file"
-        assert (
-            args.input_dir != args.output_dir
-        ), "!!! Input and output directories must be different"
+with open(LABEL_OUTPUT_PATH, "w", encoding="utf-8") as f:
+    for key in labels_aug_map.keys():
+        content = f"{key}\t{labels_aug_map[key]}"
+        if not content.endswith("\n"):
+            content += "\n"
+        f.write(content)
 
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Script for data augmentation")
-    parser.add_argument(
-        "--input_dir", type=str, required=True, help="Directory containing input data"
-    )
-    parser.add_argument(
-        "--output_dir", type=str, required=True, help="Directory to save augmented data"
-    )
-    parser.add_argument(
-        "--augmentation_config",
-        type=str,
-        required=True,
-        help="Path to the augmentation configuration file (YAML format)",
-    )
-    parser.add_argument(
-        "--augmentation_radio",
-        type=int,
-        default=3,
-        help="Number of augmentations to apply per image (default: 3). This is used to control the number of augmented images generated per original image.",
-    )
-    args = parser.parse_args()
-
-    config = Config(args)
-    print(">>> Configuration:")
-    print(config)
-
-    transform = A.load(config.augmentation_config, data_format="yaml")
-    print(f">>> Loaded augmentation configuration from {config.augmentation_config}")
-    print(f"\t{transform}")
-
-    input_images = list(
-        filter(
-            lambda x: x.endswith((".jpg", ".jpeg", ".png")),
-            os.listdir(config.input_dir),
-        )
-    )
-    for image_name in tqdm(input_images, ascii=True, desc=">>> Validating images"):
-        image_name_without_ext = os.path.splitext(image_name)[0]
-        annotation_path = os.path.join(
-            config.input_dir, f"{image_name_without_ext}.json"
-        )
-        assert os.path.exists(
-            annotation_path
-        ), f"!!! Annotation file {annotation_path} does not exist for image {image_name}."
-    assert 2 * len(input_images) == len(
-        os.listdir(config.input_dir)
-    ), "!!! Input directory must contain images and their corresponding annotations."
-
-    print(f">>> Found {len(list(input_images))} images in the input directory")
-
-    for image_name in tqdm(input_images, ascii=True, desc=">>> Data augmentation"):
-        image_path = os.path.join(config.input_dir, image_name)
-        image_name_without_ext = os.path.splitext(image_name)[0]
-        annotation_path = os.path.join(
-            config.input_dir, f"{image_name_without_ext}.json"
-        )
-
-        try:
-            image = cv2.imread(image_path, cv2.IMREAD_COLOR_RGB)
-
-            output_image_path = os.path.join(config.output_dir, image_name)
-            output_annotation_path = os.path.join(
-                config.output_dir, f"{image_name_without_ext}.json"
-            )
-            cv2.imwrite(output_image_path, cv2.cvtColor(image, cv2.COLOR_RGB2BGR))  # type: ignore
-            with open(annotation_path, "r") as f:
-                annotation_data = f.read()
-            with open(output_annotation_path, "w") as f:
-                f.write(annotation_data)
-
-            for i in range(config.augmentation_radio):
-                transformed = transform(image=image)["image"]  # type: ignore
-
-                output_image_name = f"{image_name_without_ext}_aug_{i + 1}.jpg"
-                output_annotation_name = f"{image_name_without_ext}_aug_{i + 1}.json"
-                output_image_path = os.path.join(config.output_dir, output_image_name)
-                output_annotation_path = os.path.join(
-                    config.output_dir, output_annotation_name
-                )
-
-                cv2.imwrite(
-                    output_image_path, cv2.cvtColor(transformed, cv2.COLOR_RGB2BGR)
-                )
-                with open(annotation_path, "r") as f:
-                    annotation_data = f.read()
-                with open(output_annotation_path, "w") as f:
-                    f.write(annotation_data)
-
-        except Exception as e:
-            print(f"!!! Error reading image {image_name}: {e}")
-            continue
+print("Data augmentation completed.")
