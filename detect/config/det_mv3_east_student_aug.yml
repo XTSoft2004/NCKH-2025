@@ -1,12 +1,13 @@
 Global:
   use_gpu: true
-  epoch_num: 10000
+  epoch_num: 200
   log_smooth_window: 20
   print_batch_step: 2
   save_model_dir: ./output/east_mv3/
-  save_epoch_step: 1000
-  # evaluation is run every 5000 iterations after the 4000th iteration
-  eval_batch_step: [4000, 5000]
+  save_epoch_step: 1200
+  eval_batch_step:
+    - 0
+    - 100
   cal_metric_during_train: False
   pretrained_model: ./pretrain_models/MobileNetV3_large_x0_5_pretrained
   checkpoints:
