@@ -69,11 +69,6 @@ Train:
           img_mode: BGR
           channel_first: false
       - DetLabelEncode:
-      - IaaAugment:
-          augmenter_args:
-            - { "type": Affine, "args": { "rotate": [-10, 10] } }
-            - { "type": Resize, "args": { "size": [0.5, 3] } }
-            - { "type": Perspective, "args": { "scale": [0.01, 0.05] } }
       - EastRandomCropData:
           size:
             - 640
